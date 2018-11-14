@@ -5,24 +5,32 @@ import argparse
 import requests
 import json
 
-LIST_REPO='https://api.github.com/repositories'
+LIST_REPO_EP='https://api.github.com/repositories'
+README_EP='https://api.github.com/repos/{}/readme?ref=master'
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='test DataEng search API')
     argparser.add_argument('-bp',"--bookpath", type=str, default='../../../data/attune/Attune+Locations.csv', help="path to attune book")
     args = argparser.parse_args()
 
-    # headers = {'content-type': 'application/json'}
-    #
-    # payload = {'businessName': contractor.insured_name,
-    #            'address':contractor.street,
-    #            'zip':contractor.zipcode,
-    #            'city':contractor.city,
-    #            'state':contractor.state}
+    headers = {'Accept': 'application/vnd.github.v3.json'}
 
-    rsp = requests.get(LIST_REPO)
-    jsonObj = json.loads(rsp.text)
+    import base64
 
-    print(jsonObj)
+    rsp = requests.get(LIST_REPO_EP)
+    repos = json.loads(rsp.text)
+
+    for repo in repos:
+        print('*' * 100)
+        owner_repo_pair = repo['full_name']
+        print(owner_repo_pair)
+        print(README_EP.format(owner_repo_pair))
+
+        rsp = requests.get(README_EP.format(owner_repo_pair),headers=headers)
+
+        readme = json.loads(rsp.text)
+        if 'content' in readme:
+            readme['content'] = base64.b64decode(readme['content'])
+        print(readme)
 
 
