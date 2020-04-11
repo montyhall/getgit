@@ -123,6 +123,7 @@ class CrawlerSpider(CrawlSpider):
                                      errback=self.pagination_error,
                                      meta={'since': page})
 
+
         orgs = json.loads(response.body_as_unicode())
 
         if orgs:
