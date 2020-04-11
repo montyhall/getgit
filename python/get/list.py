@@ -5,6 +5,8 @@ import argparse
 import requests
 import json
 
+#curl -i -XGET https://api.github.com/organizations?since=1
+
 LIST_REPO_EP='https://api.github.com/repositories'
 README_EP='https://api.github.com/repos/{}/readme?ref=master'
 
@@ -32,5 +34,6 @@ if __name__ == '__main__':
         if 'content' in readme:
             readme['content'] = base64.b64decode(readme['content'])
         print(readme)
+        
 
 
