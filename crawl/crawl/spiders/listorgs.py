@@ -107,6 +107,9 @@ class CrawlerSpider(CrawlSpider):
                              meta={'since':page})
 
     def parse(self, response):
+        limit = int(response.headers['X-Ratelimit-Limit'].decode('utf-8'))
+        remaining = int(response.headers['X-Ratelimit-Remaining'].decode('utf-8'))
+
         # get agent links on 1 result page
         linkobj = response.headers['link'].decode('utf-8')
         if linkobj:
