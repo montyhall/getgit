@@ -138,6 +138,141 @@ foreach uname <- 'login' in rsp
     curl -i -XGET https://api.github.com/orgs/github/repos
 ```
 
+Get count of all repos in GitHub (as of 4/11/2020 `74,746,288`)
+
+```json
+{
+  search(query: "is:public", type: REPOSITORY, first: 50) {
+    repositoryCount
+    pageInfo {
+      endCursor
+      startCursor
+    }
+    edges {
+      node {
+        ... on Repository {
+          name
+        }
+      }
+    }
+  }
+}
+```
+
+```json
+{
+  search(query: "is:public fork:false created:>2020-01-01", type: REPOSITORY, first: 10) {
+    repositoryCount
+    pageInfo {
+      endCursor
+      startCursor
+    }
+    edges {
+      node {
+        ... on Repository {
+          name
+          id
+          nameWithOwner
+          databaseId
+          createdAt
+          description
+          diskUsage
+          hasWikiEnabled
+          homepageUrl
+          url
+          updatedAt
+          resourcePath
+          projectsUrl
+          projectsResourcePath
+          owner {
+            id
+            url
+            ... on Organization {
+              id
+              email
+              name
+              createdAt
+              databaseId
+              description
+              location
+              projects {
+                totalCount
+              }
+              teams {
+                totalCount
+              }
+              url
+              updatedAt
+              websiteUrl
+            }
+            avatarUrl(size: 10)
+            login
+            ... on User {
+              id
+              email
+              company
+              bio
+            }
+          }
+          sshUrl
+          pushedAt
+          forkCount
+          deployments {
+            totalCount
+          }
+          isArchived
+          isDisabled
+          isLocked
+          isPrivate
+          isTemplate
+          isMirror
+          issues {
+            totalCount
+          }
+          assignableUsers {
+            totalCount
+          }
+          commitComments {
+            totalCount
+          }
+          licenseInfo {
+            name
+            id
+          }
+          mentionableUsers {
+            totalCount
+          }
+          primaryLanguage {
+            name
+            id
+          }
+          pullRequests {
+            totalCount
+          }
+          releases {
+            totalCount
+          }
+          stargazers {
+            totalCount
+          }
+          watchers {
+            totalCount
+          }
+          repositoryTopics(first: 10) {
+            totalCount
+            nodes {
+              topic {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+```
 ### list All public repos
 
 [see docs](https://developer.github.com/v3/repos/#list-all-public-repositories)
