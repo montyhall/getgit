@@ -2,8 +2,6 @@ from requests import exceptions, request
 
 class GitHubQuery(object):
     BASE_URL = "https://api.github.com/graphql"
-    ORGANIZATION = "org_name"
-    API_TOKEN="2df7b713b04fe8ff8f1d21f9eb6713936bd8033c"
 
     def __init__(
             self,
@@ -28,8 +26,6 @@ class GitHubQuery(object):
         }
 
     def generator(self):
-        print('*'*100)
-        print(self.query_params)
         while True:
             try:
                 yield request(
@@ -37,7 +33,6 @@ class GitHubQuery(object):
                     GitHubQuery.BASE_URL,
                     headers=self.headers,
                     json={"query":self.query,"variables":self.query_params}
-                    # json=dict(query=self.query.format_map(self.query_params))
                 ).json()
             except exceptions.HTTPError as http_err:
                 raise http_err

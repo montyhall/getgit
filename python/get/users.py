@@ -13,8 +13,8 @@ logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
 
 class USER_QUERY(GitHubQuery):
     QUERY = """
-query ($query: String!, $type: SearchType!, $first: Int!) {
-  search(query: $query, type: $type, first: $first) {
+query ($query: String!, $type: SearchType!, $first: Int!, $after: Int!) {
+  search(query: $query, type: $type, first: $first, after: $after) {
     userCount
     edges {
       node {
@@ -169,39 +169,40 @@ query ($query: String!, $type: SearchType!, $first: Int!) {
             additional_headers=USER_QUERY.ADDITIONAL_HEADERS
         )
 
-    def iterator(self):
+    def iterator(self,datafile):
         generator = self.generator()
         hasNextPage = True
-        users = []
-        while hasNextPage:
-            response = next(generator)
-            #endCursor = response["data"]["organization"]["repositories"]["pageInfo"]["endCursor"]
-            #self.query_params = dict(after=endCursor)
-            #users.extend(response["data"]["organization"]["repositories"]["nodes"])
-            users.extend(response)
-            #hasNextPage = response["data"]["organization"]["repositories"]["pageInfo"]["hasNextPage"]
-            hasNextPage=False
-            yield response["data"]["search"]["edges"]
-        #return (users)
+        totalParsed,total=0,0
+        with jsonlines.open(datafile, mode='w') as jsonfile:
+            while hasNextPage:
+                response = next(generator)
+                endCursor = response["data"]["search"]["pageInfo"]["endCursor"]
+                #self.query_params = dict(after=endCursor)
+                hasNextPage = response["data"]["search"]["pageInfo"]["hasNextPage"]
+                hasNextPage=False
+                for edge in response["data"]["search"]["edges"]:
+                    jsonfile.write(edge['node'])
+                    totalParsed +=1
 
-
+                if total==0:
+                    total = int(response["data"]["search"]["userCount"])
+                sys.stdout.write('\r{}/{} [{:.2f}%]'.format(totalParsed,total,(totalParsed/total*100)))
+                sys.stdout.flush()
+                logging.info('{}/{}'.format(totalParsed,total))
+            print('\n')
 def main():
     """
-    python users.py --token 2df7b713b04fe8ff8f1d21f9eb6713936bd8033c
+    python users.py --token 017cbe095f094a6f23c61f09dedeb7dd027c5862
     """
     try:
         parser = argparse.ArgumentParser(description='Queries GitHub through the GitGraphQL API for all users')
-        parser.add_argument("--token", type=str, default='2df7b713b04fe8ff8f1d21f9eb6713936bd8033c', help="configs")
-        parser.add_argument("--disc", type=str, default='data.json', help="configs")
+        parser.add_argument("--token", type=str, default='017cbe095f094a6f23c61f09dedeb7dd027c5862', help="configs")
+        parser.add_argument("--disc", type=str, default='data.jsonl', help="configs")
         args = parser.parse_args()
         logging.info('Starting User Query')
 
         q = USER_QUERY(github_token=args.token)
-
-        with jsonlines.open(args.disc, mode='w') as writer:
-            while q.iterator().hasnext():
-                rsp = q.iterator()
-                writer.write(rsp[0]['node'])
+        q.iterator(datafile=args.disc)
 
     except getopt.GetoptError:
         sys.exit(2)
