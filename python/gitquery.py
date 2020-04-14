@@ -1,4 +1,5 @@
 from requests import exceptions, request
+import pytz
 
 class GitHubQuery(object):
     BASE_URL = "https://api.github.com/graphql"
@@ -14,6 +15,7 @@ class GitHubQuery(object):
         self.query = query
         self.query_params = query_params or dict()
         self.additional_headers = additional_headers or dict()
+        self.timezone = pytz.timezone('UTC')
 
     @property
     def headers(self):
@@ -25,6 +27,7 @@ class GitHubQuery(object):
             **self.additional_headers
         }
 
+    # https://github.com/graphql-python/graphene-django/blob/dbd3957a9f622573b2b106546f3accc48f5d5b41/graphene_django/views.py#L161-L163
     def generator(self):
         while True:
             try:
@@ -39,5 +42,5 @@ class GitHubQuery(object):
             except Exception as err:
                 raise err
 
-    def iterator(self):
+    def iterator2(self):
         pass
