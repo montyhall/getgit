@@ -251,9 +251,9 @@ class USER_QUERY(GitHubQuery):
                     if "data" in response and "error" not in response:
                         remaining, limit = self.check_ratelimit(response)
                         endCursor = response["data"]["search"]["pageInfo"]["endCursor"]
-                        self.query_params = dict(after=endCursor)
-                        hasNextPage = response["data"]["search"]["pageInfo"]["hasNextPage"]
-                        #hasNextPage=False
+                        #self.query_params['after'] = dict(after=endCursor)
+                        self.query_params['after'] = endCursor
+                        hasNextPage = bool(response["data"]["search"]["pageInfo"]["hasNextPage"])
                         for edge in response["data"]["search"]["edges"]:
                             jsonfile.write(edge['node'])
                             totalParsed +=1
@@ -266,6 +266,7 @@ class USER_QUERY(GitHubQuery):
                 except exceptions.HTTPError:
                     errors+=1
                 except Exception as err:
+                    print(err)
                     errors+=1
             print('\n')
 def main():
