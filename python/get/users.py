@@ -6,6 +6,7 @@ from datetime import datetime,timezone
 import time
 from dateutil.parser import parse
 from requests import exceptions
+import traceback
 
 sys.path.append('..')
 from gitquery import GitHubQuery
@@ -241,17 +242,17 @@ class USER_QUERY(GitHubQuery):
             while hasNextPage:
                 try:
                     response = next(generator)
-                    if "data" not in response:
+
+                    if response and "data" not in response:
                         USER_QUERY.QUERY_PARAMS.FIRST = USER_QUERY.QUERY_PARAMS.FIRST - USER_QUERY.QUERY_PARAMS.BACKOFF
                         retries += 1
 
-                    if "error" in response:
+                    if response and "error" in response:
                         errors += 1
 
-                    if "data" in response and "error" not in response:
+                    if response and "data" in response and "error" not in response:
                         remaining, limit = self.check_ratelimit(response)
-                        endCursor = response["data"]["search"]["pageInfo"]["endCursor"]
-                        #self.query_params['after'] = dict(after=endCursor)
+                        endCursor = str(response["data"]["search"]["pageInfo"]["endCursor"])
                         self.query_params['after'] = endCursor
                         hasNextPage = bool(response["data"]["search"]["pageInfo"]["hasNextPage"])
                         for edge in response["data"]["search"]["edges"]:
@@ -266,7 +267,6 @@ class USER_QUERY(GitHubQuery):
                 except exceptions.HTTPError:
                     errors+=1
                 except Exception as err:
-                    print(err)
                     errors+=1
             print('\n')
 def main():
