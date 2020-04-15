@@ -242,7 +242,7 @@ class USER_QUERY(GitHubQuery):
         threshold=1000 #n calls before we sleep
         with jsonlines.open(datafile, mode='w') as jsonfile:
             while hasNextPage:
-                if totalParsed >= threshold:
+                if totalParsed >= threshold -1:
                     now = datetime.now(timezone.utc).replace(microsecond=0)
                     self.sleepsome((resetAt - now).total_seconds())
                     logging.info('reached {} calls. SLeeping until {}'.format(threshold,resetAt))
@@ -275,7 +275,7 @@ class USER_QUERY(GitHubQuery):
                     errors+=1
                 except Exception as err:
                     errors+=1
-            print('\n')
+            print('\nFinished')
 def main():
     """
     python users.py --token <TOKEN>
