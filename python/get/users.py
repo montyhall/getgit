@@ -16,7 +16,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
 
 class USER_QUERY(GitHubQuery):
     QUERY = """
-            query ($query: String!, $type: SearchType!, $first: Int!) {
+            query ($query: String!, $type: SearchType!, $first: Int!, $after: String) {
               rateLimit(dryRun: false) {
                 remaining
                 cost
@@ -24,7 +24,7 @@ class USER_QUERY(GitHubQuery):
                 nodeCount
                 resetAt
               }
-              search(query: $query, type: $type, first: $first) {
+              search(query: $query, type: $type, first: $first, after: $after) {
                 userCount
                 edges {
                   node {
