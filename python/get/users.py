@@ -232,6 +232,7 @@ class USER_QUERY(GitHubQuery):
             now = datetime.now(timezone.utc).replace(microsecond=0)
             logging.info('reached {} limit. SLeeping until {}'.format(limit, resetAt))
             self.sleepsome((resetAt - now).total_seconds())
+            logging.info('resuming crawling')
 
         return resetAt,remaining,cost,limit,nodeCount
 
@@ -247,6 +248,8 @@ class USER_QUERY(GitHubQuery):
                     now = datetime.now(timezone.utc).replace(microsecond=0)
                     logging.info('reached {} calls. SLeeping until {}'.format(threshold,resetAt))
                     self.sleepsome((resetAt - now).total_seconds())
+                    logging.info('resuming crawling')
+                    threshold+=threshold
                 try:
                     response = next(generator)
 
