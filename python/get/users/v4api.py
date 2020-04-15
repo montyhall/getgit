@@ -8,7 +8,7 @@ from dateutil.parser import parse
 from requests import exceptions
 import traceback
 
-sys.path.append('..')
+sys.path.append('../..')
 from gitquery import GitHubQuery
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
@@ -186,7 +186,7 @@ class USER_QUERY(GitHubQuery):
     FIRST=2
     BACKOFF=1
     QUERY_PARAMS = dict(type='USER',
-                        query='location:usa repos:>0',
+                        query='location:usa repos:>0 created:>2005-01-01',
                         first=FIRST,
                         after=None)
 
@@ -201,10 +201,25 @@ class USER_QUERY(GitHubQuery):
             query_params=USER_QUERY.QUERY_PARAMS,
             additional_headers=USER_QUERY.ADDITIONAL_HEADERS
         )
-    def sleepsome(self,sleep):
-        time.sleep(sleep)
+        self.cursorf = None
+        self.lastcursor = None
 
-    def check_ratelimit(self,response):
+    def setCursor(self,cursorfile):
+        try:
+            with open(cursorfile, 'r') as f:
+                self.lastcursor = f.readlines()[-1].strip()
+        except FileNotFoundError:
+            pass
+
+        if self.lastcursor:
+            self.query_params['after'] = self.lastcursor
+
+        self.cursorf = open(cursorfile, 'a')
+
+    def sleepsome(self, sleept):
+        time.sleep(sleept)
+
+    def check_ratelimit(self, response):
         '''
         see
         https://developer.github.com/v4/guides/resource-limitations/
@@ -236,20 +251,13 @@ class USER_QUERY(GitHubQuery):
 
         return resetAt,remaining,cost,limit,nodeCount
 
+    #Y3Vyc29yOjEy
     def iterator(self,datafile):
         generator = self.generator()
         hasNextPage = True
         totalParsed,retries,errors,total=0,0,0,0
-        resetAt=None
-        threshold=900 #n calls before we sleep
-        with jsonlines.open(datafile, mode='w') as jsonfile:
+        with jsonlines.open(datafile, mode='a') as jsonfile:
             while hasNextPage:
-                if totalParsed >= threshold:
-                    now = datetime.now(timezone.utc).replace(microsecond=0)
-                    logging.info('reached {} calls. SLeeping until {}'.format(threshold,resetAt))
-                    self.sleepsome((resetAt - now).total_seconds())
-                    logging.info('resuming crawling')
-                    threshold+=threshold
                 try:
                     response = next(generator)
 
@@ -264,6 +272,7 @@ class USER_QUERY(GitHubQuery):
                         resetAt, remaining, cost, limit, nodeCount = self.check_ratelimit(response)
                         endCursor = str(response["data"]["search"]["pageInfo"]["endCursor"])
                         self.query_params['after'] = endCursor
+                        self.cursorf.write(endCursor+'\n')
                         hasNextPage = bool(response["data"]["search"]["pageInfo"]["hasNextPage"])
                         for edge in response["data"]["search"]["edges"]:
                             jsonfile.write(edge['node'])
@@ -275,29 +284,37 @@ class USER_QUERY(GitHubQuery):
                         sys.stdout.flush()
                         logging.info('{}/{} [errors: {}, retries: {}] remaining: {} limit:{} cost: {} nodecount: {}'.format(
                             totalParsed,total,errors,retries,remaining,limit,cost,nodeCount))
+
                 except exceptions.HTTPError:
                     errors+=1
                 except Exception as err:
                     errors+=1
-            print('\nFinished')
+
+        self.cursorf.close()
+        print('\nFinished: {}'.format(totalParsed))
+
+
 def main():
     """
-    python users.py --token <TOKEN>
+    python v4api.py --token <TOKEN>
     """
     try:
         parser = argparse.ArgumentParser(description='Queries GitHub through the GitGraphQL API for all users')
         parser.add_argument("--token", type=str, help="configs")
         parser.add_argument("--disc", type=str, default='data.jsonl', help="configs")
+        parser.add_argument("--cursor", type=str, default='cursor.txt', help="configs")
         args = parser.parse_args()
         logging.info('Starting User Query')
 
         q = USER_QUERY(github_token=args.token)
+        q.setCursor(args.cursor)
         q.iterator(datafile=args.disc)
 
     except getopt.GetoptError:
         sys.exit(2)
 
     logging.info('Finished')
+
 
 if __name__ == '__main__':
     main()

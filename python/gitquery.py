@@ -28,7 +28,6 @@ class GitHubQuery(object):
             **self.additional_headers
         }
 
-    # https://github.com/graphql-python/graphene-django/blob/dbd3957a9f622573b2b106546f3accc48f5d5b41/graphene_django/views.py#L161-L163
     def generator(self):
         while True:
             try:
