@@ -1,6 +1,7 @@
 from requests import exceptions, request
 import pytz
 
+# see https://gist.github.com/gbaman/b3137e18c739e0cf98539bf4ec4366ad
 class GitHubQuery(object):
     BASE_URL = "https://api.github.com/graphql"
 

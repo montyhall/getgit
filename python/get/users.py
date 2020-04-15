@@ -201,6 +201,8 @@ class USER_QUERY(GitHubQuery):
             query_params=USER_QUERY.QUERY_PARAMS,
             additional_headers=USER_QUERY.ADDITIONAL_HEADERS
         )
+    def sleepsome(self,sleep):
+        time.sleep(sleep)
 
     def check_ratelimit(self,response):
         '''
@@ -228,18 +230,22 @@ class USER_QUERY(GitHubQuery):
 
         if remaining <= USER_QUERY.FIRST:
             now = datetime.now(timezone.utc).replace(microsecond=0)
-            seconds = (resetAt - now).total_seconds()
-            if seconds > 0.0:
-                time.sleep(seconds)
+            self.sleepsome((resetAt - now).total_seconds())
 
-        return remaining,limit
+        return resetAt,remaining,cost,limit,nodeCount
 
     def iterator(self,datafile):
         generator = self.generator()
         hasNextPage = True
         totalParsed,retries,errors,total=0,0,0,0
+        resetAt=None
+        threshold=1000 #n calls before we sleep
         with jsonlines.open(datafile, mode='w') as jsonfile:
             while hasNextPage:
+                if totalParsed >= threshold:
+                    now = datetime.now(timezone.utc).replace(microsecond=0)
+                    self.sleepsome((resetAt - now).total_seconds())
+                    logging.info('reached {} calls. SLeeping until {}'.format(threshold,resetAt))
                 try:
                     response = next(generator)
 
@@ -251,7 +257,7 @@ class USER_QUERY(GitHubQuery):
                         errors += 1
 
                     if response and "data" in response and "error" not in response:
-                        remaining, limit = self.check_ratelimit(response)
+                        resetAt, remaining, cost, limit, nodeCount = self.check_ratelimit(response)
                         endCursor = str(response["data"]["search"]["pageInfo"]["endCursor"])
                         self.query_params['after'] = endCursor
                         hasNextPage = bool(response["data"]["search"]["pageInfo"]["hasNextPage"])
@@ -263,7 +269,8 @@ class USER_QUERY(GitHubQuery):
                             total = int(response["data"]["search"]["userCount"])
                         sys.stdout.write('\r{}/{} [{:.2f}%] errors: {} retries: {}'.format(totalParsed,total,(totalParsed/total*100),errors,retries))
                         sys.stdout.flush()
-                        logging.info('{}/{} [errors: {}, retries: {}] remaining: {} limit:{}'.format(totalParsed,total,errors,retries,remaining,limit))
+                        logging.info('{}/{} [errors: {}, retries: {}] remaining: {} limit:{} cost: {} nodecount: {}'.format(
+                            totalParsed,total,errors,retries,remaining,limit,cost,nodeCount))
                 except exceptions.HTTPError:
                     errors+=1
                 except Exception as err:
@@ -286,6 +293,8 @@ def main():
     except getopt.GetoptError:
         sys.exit(2)
 
+    logging.info('Finished')
 
 if __name__ == '__main__':
     main()
+
