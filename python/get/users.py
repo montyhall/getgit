@@ -230,6 +230,7 @@ class USER_QUERY(GitHubQuery):
 
         if remaining <= USER_QUERY.FIRST:
             now = datetime.now(timezone.utc).replace(microsecond=0)
+            logging.info('reached {} limit. SLeeping until {}'.format(limit, resetAt))
             self.sleepsome((resetAt - now).total_seconds())
 
         return resetAt,remaining,cost,limit,nodeCount
@@ -239,13 +240,13 @@ class USER_QUERY(GitHubQuery):
         hasNextPage = True
         totalParsed,retries,errors,total=0,0,0,0
         resetAt=None
-        threshold=1000 #n calls before we sleep
+        threshold=900 #n calls before we sleep
         with jsonlines.open(datafile, mode='w') as jsonfile:
             while hasNextPage:
-                if totalParsed >= threshold -1:
+                if totalParsed >= threshold:
                     now = datetime.now(timezone.utc).replace(microsecond=0)
-                    self.sleepsome((resetAt - now).total_seconds())
                     logging.info('reached {} calls. SLeeping until {}'.format(threshold,resetAt))
+                    self.sleepsome((resetAt - now).total_seconds())
                 try:
                     response = next(generator)
 
