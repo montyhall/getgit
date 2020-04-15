@@ -273,6 +273,7 @@ class USER_QUERY(GitHubQuery):
                         endCursor = str(response["data"]["search"]["pageInfo"]["endCursor"])
                         self.query_params['after'] = endCursor
                         self.cursorf.write(endCursor+'\n')
+                        self.cursorf.flush()
                         hasNextPage = bool(response["data"]["search"]["pageInfo"]["hasNextPage"])
                         for edge in response["data"]["search"]["edges"]:
                             jsonfile.write(edge['node'])
