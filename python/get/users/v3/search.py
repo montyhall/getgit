@@ -9,7 +9,6 @@ import argparse
 import getopt,sys
 from datetime import datetime,timezone
 import jsonlines
-from dateutil.parser import parse
 
 """
 python implementation of Github V3 Search API for users 
@@ -212,9 +211,10 @@ class Connection(object):
 
     def throttle(self, response):
         """sleep to reset time
+        see https://developer.github.com/v3/#rate-limiting
         """
         limit = int(response.headers['x-ratelimit-limit'])
-        resetAt = parse(response.headers['X-RateLimit-Reset'])
+        resetAt = int(response.headers['X-RateLimit-Reset'])
         now = datetime.now(timezone.utc).replace(microsecond=0)
         logging.info('reached {} limit. SLeeping until {}'.format(limit, resetAt))
         self.sleepsome((resetAt - now).total_seconds())
