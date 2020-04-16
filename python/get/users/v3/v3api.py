@@ -227,9 +227,11 @@ class Connection(object):
                 if response.status_code == 403:
                     self.throttle(response)
 
+
 def main():
     """
     python v4api.py --token <TOKEN>
+    there are 52,594,054 users
     """
     try:
         parser = argparse.ArgumentParser(description='Queries GitHub through the v3 API for all users')
@@ -253,7 +255,7 @@ def main():
         sys.exit(2)
 
     logging.info('Finished')
-
+    print('Done')
 
 if __name__ == '__main__':
     main()
