@@ -126,9 +126,14 @@ def parse_response(response):
     """
     response.parsed = AttrDict()
     response.parsed_link = AttrDict()
+    nextp, lastp = None, None
 
     if 'link' in response.headers.keys():
         response.parsed_link = _parse_link(response.headers['link'])
+        nextp = response.parsed_link['next']['params']['page']
+        lastp = response.parsed_link['last']['params']['page']
+        #print(response.headers['link'])
+        print('\nparsedLinks: {}'.format(response.parsed_link))
 
     headers = ['status', 'x-ratelimit-limit', 'x-ratelimit-remaining']
     for header in headers:
@@ -140,7 +145,7 @@ def parse_response(response):
 
     response.parsed = json.loads(response.text)
 
-    return response
+    return response,nextp,lastp
 
 
 class Pager(object):
@@ -156,25 +161,39 @@ class Pager(object):
         self.params = params
         self.max_pages = max_pages
         self.count = 0
+        self.next = None
+        self.last = None
 
     def __iter__(self):
         while True:
             self.count += 1
-            response = self.conn.send('GET', self.uri, self.params)
+            response,nextp,lastp = self.conn.send('GET', self.uri, self.params)
             yield response
 
-            if self.count == self.max_pages:
+            if nextp:
+                self.next = nextp
+            else:
+                self.next += 1
+
+            self.params['page'] = self.next
+
+            if lastp:
+                self.last = lastp
+
+            if self.count == self.max_pages or self.count == self.last:
                 break
 
-            if 'next' not in response.parsed_link.keys():
-                break
+            # if 'next' not in response.parsed_link.keys():
+            #     break
 
             # Parsed link is absolute. Connection wants a relative link,
             # so remove protocol and GitHub endpoint for the pagination URI.
-            m = re.match(self.conn.endpoint + '(.*)', response.parsed_link.next.uri)
-            self.uri = m.groups()[0]
-            self.params = response.parsed_link.next.params
-
+            # m = re.match(self.conn.endpoint + '(.*)', response.parsed_link.next.uri)
+            # self.uri = m.groups()[0]
+            # self.params = response.parsed_link.next.params
+            #
+            # print('count: {} max: {}'.format(self.count,self.max_pages))
+            # print('next' in response.parsed_link.keys())
 
 class Connection(object):
     def __init__(self, token=None):
@@ -217,13 +236,15 @@ class Connection(object):
         while True:
             try:
                 response = requests.request(method, url, **kwargs)
+                rsp,nextp,lastp = parse_response(response)
+                self.totalcounts = rsp.parsed['total_count']
+                bincomplete = bool(rsp.parsed['incomplete_results'])
+
                 self.currentLimit = int(response.headers['x-ratelimit-remaining'])
                 if self.currentLimit < 1:
                     self.throttle(response)
-                rsp = parse_response(response)
-                self.totalcounts = rsp.parsed['total_count']
-                bincomplete = bool(rsp.parsed['incomplete_results'])
-                return rsp
+
+                return rsp, nextp, lastp
                 break
             except ResponseError as e:
                 if response.status_code == 403:
@@ -249,7 +270,7 @@ def main():
         uri = '/search/users'
 
         with jsonlines.open(args.disc, mode='a') as jsonfile:
-            pager = Pager(conn,uri,params={'q': 'location:usa'},max_pages=0)
+            pager = Pager(conn,uri,params={'q': 'location:usa','page':'1'},max_pages=0)
             for page in pager:
                 for usr in page.parsed['items']:
                     jsonfile.write(usr)
